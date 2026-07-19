@@ -840,6 +840,37 @@ export function LoginScreen({ onLoginSuccess, isError, loadingText, deferredProm
     hapticImpact("medium");
 
     try {
+      // 1. Реальная проверка Telegram OTP из таблицы auth_challenges в Supabase
+      const challengeId = `tg_otp_${cleanUsername}`;
+      const { data: challengeData, error: challengeError } = await supabaseClient
+        .from('auth_challenges')
+        .select('*')
+        .eq('id', challengeId)
+        .maybeSingle();
+
+      if (challengeError || !challengeData) {
+        throw new Error('Код подтверждения не найден или устарел. Убедитесь, что запустили вашего бота в Termux, отправили в него /login и ввели правильный Username.');
+      }
+
+      const challengeParts = challengeData.challenge.split(':');
+      const savedCode = challengeParts[0];
+      const savedTimestamp = challengeParts[1] ? parseInt(challengeParts[1], 10) : null;
+
+      if (savedCode !== telegramOtp.trim()) {
+        throw new Error('Введен неверный код подтверждения.');
+      }
+
+      if (savedTimestamp && Date.now() - savedTimestamp > 10 * 60 * 1000) {
+        throw new Error('Срок действия кода подтверждения (10 минут) истек. Пожалуйста, отправьте боту /login еще раз.');
+      }
+
+      // Удаляем использованный код для предотвращения повторного использования (Replay-атак)
+      try {
+        await supabaseClient.from('auth_challenges').delete().eq('id', challengeId);
+      } catch (delErr) {
+        console.warn('Failed to delete verified OTP:', delErr);
+      }
+
       const simulatedSeed = `telegram mini app ecosystem session sync node key ${cleanUsername}`;
       const stableId = getStableNumericId(simulatedSeed);
 
