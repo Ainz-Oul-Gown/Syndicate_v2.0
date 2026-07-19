@@ -1922,8 +1922,8 @@ const handleCopyText = (text: string) => {
                     >
                       <Fingerprint className="w-8 h-8" />
                     </button>
-                    <span className="text-[10px] text-rose-400 text-center max-w-[240px] leading-relaxed">
-                      Ошибка верификации. Нажмите на датчик, чтобы попробовать снова.
+                    <span className="text-[11px] text-rose-400 text-center max-w-[280px] leading-relaxed">
+                      {errorMessage || "Ошибка верификации. Нажмите на датчик, чтобы попробовать снова."}
                     </span>
                   </div>
                 )}
