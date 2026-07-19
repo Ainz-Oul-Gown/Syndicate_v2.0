@@ -539,6 +539,33 @@ export function LoginScreen({ onLoginSuccess, isError, loadingText, deferredProm
     }
   };
 
+
+  // Force update PWA by unregistering service workers and clearing caches
+  const forceUpdatePwa = async () => {
+    hapticImpact("medium");
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          await caches.delete(name);
+        }
+      }
+      localStorage.removeItem('synd_token');
+      localStorage.removeItem('synd_my_pubkey_cache');
+      localStorage.removeItem('synd_my_pubsign_cache');
+      // Force reload from server bypassing browser cache with random query param
+      window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+    } catch (e: any) {
+      window.location.reload();
+    }
+  };
+
   // WebAuthn / Passkeys - Handler
   const handleWebAuthnSubmit = async () => {
     setErrorMessage(null);
@@ -2215,9 +2242,17 @@ const handleCopyText = (text: string) => {
           )}
 
           {/* Bottom security assurance */}
-          <div className="mt-8 text-[10px] text-slate-600 font-mono flex items-center gap-1.5">
-            <Lock className="w-3 h-3 text-slate-600" />
-            ZERO-KNOWLEDGE AUTH PROTOCOL
+          <div className="mt-8 text-[10px] text-slate-600 font-mono flex flex-col items-center gap-2 select-none">
+            <div className="flex items-center gap-1.5">
+              <Lock className="w-3 h-3 text-slate-600" />
+              ZERO-KNOWLEDGE AUTH PROTOCOL
+            </div>
+            <button
+              onClick={forceUpdatePwa}
+              className="text-[9px] text-slate-500 hover:text-slate-300 underline cursor-pointer transition uppercase tracking-wider font-semibold hover:no-underline active:scale-95"
+            >
+              Сбросить кэш PWA и обновить приложение
+            </button>
           </div>
         </div>
       )}
